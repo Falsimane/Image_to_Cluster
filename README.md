@@ -76,9 +76,70 @@ Votre mission (si vous l'acceptez) : Créez une **image applicative customisée 
 Séquence 4 : Documentation  
 Difficulté : Facile (~30 minutes)
 ---------------------------------------------------
-**Complétez et documentez ce fichier README.md** pour nous expliquer comment utiliser votre solution.  
-Faites preuve de pédagogie et soyez clair dans vos expliquations et processus de travail.  
-   
+
+Voici comment utiliser et comprendre la solution déployée dans ce dépôt.
+
+### 0. Prérequis
+
+Assurez-vous bien d'être dans un environnement GitHub Codespace (cf. Séquence 1). Le projet utilise des scripts conçus pour cet environnement Linux.
+
+### 1. Démarrage rapide
+
+La complexité du lancement a été abstraite derrière un Makefile. Pour lancer le déploiement complet, il faut se trouver à la racine du répertoire. Ensuite, il suffit d'exécuter : 
+
+`make all`
+
+Ce que fait cette commande automatiquement :
+1. Vérification des outils : Installe Packer, Ansible et les librairies nécessaires si elles sont absentes.
+2. Gestion intelligente du port : Vérifie si le port par défaut (8081) est libre. S'il est occupé, un prompt interactif vous demandera d'en choisir un nouveau.
+3. Setup K3d : Crée le cluster Kubernetes.
+4. Build Packer : Construit l'image custom-nginx:latest avec votre HTML.
+5. Import : Injecte l'image directement dans les nœuds du cluster.
+6. Déploiement : Lance le playbook Ansible pour créer les ressources Kubernetes (Ingress, Service, Deployment).
+
+### 2. Accès à l'application
+
+Une fois le déploiement terminé (message PLAY RECAP ... failed=0), votre application est accessible :
+1. Ouvrez l'onglet [PORTS] dans VS Code (en bas de l'écran).
+2. Repérez le port 8081 (ou celui que vous avez défini).
+3. Cliquez sur l'icône "Globe" 🌐 (Open in Browser).
+4. Vous devriez voir la page web personnalisée s'afficher (changer le fichier index.html).
+
+### 3. Gestion des ports
+
+Gestion des conflits de ports (Mode Interactif)
+
+Le Makefile utilise `lsof` pour scanner les ports avant de lancer le cluster.
+* Si le port 8081 est pris, le script se met en pause et vous demande : `👉 Entrez un nouveau port libre :`
+* Vous pouvez aussi forcer un port dès le lancement via une variable d'environnement :
+
+`make all HOST_PORT=8085`
+
+### 4. Nettoyage (Clean)
+
+Pour détruire le cluster, supprimer les conteneurs temporaires et nettoyer l'environnement : 
+`make clean`
+
+### 5. Détails techniques
+* Makefile : orchestrateur. 
+* Packer : Utilise le builder `docker` pour créer une image sans registre externe. Il injecte le fichier `src/index.html`
+* k3d : Cluster kubernetes léger tournant dans docker. La commande `k3d image import` pour transférer l'image Packer vers le cluster.
+* Ansible: 
+  * Collection : `kubernetes.core`
+  * Ressources : 
+    * Deployment : Gère les Pods (ImagePullPolicy: Never).
+    * Service : Type ClusterIP.
+    * Ingress : Route le trafic HTTP vers le service.
+
+
+
+
+
+
+
+
+
+
 ---------------------------------------------------
 Evaluation
 ---------------------------------------------------
