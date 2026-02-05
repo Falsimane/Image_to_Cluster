@@ -9,7 +9,7 @@
         kind: Namespace
         state: present
 
-    - name: Deploy Nginx
+    - name: Deploy Nginx Deployment
       kubernetes.core.k8s:
         namespace: my-app
         definition:
@@ -17,6 +17,8 @@
           kind: Deployment
           metadata:
             name: web-server
+            labels:
+              app: web
           spec:
             replicas: 1
             selector:
@@ -30,11 +32,11 @@
                 containers:
                 - name: nginx
                   image: custom-nginx:latest
-                  imagePullPolicy: Never 
+                  imagePullPolicy: Never
                   ports:
                   - containerPort: 80
 
-    - name: Expose Service
+    - name: Expose Nginx Service
       kubernetes.core.k8s:
         namespace: my-app
         definition:
@@ -46,6 +48,30 @@
             selector:
               app: web
             ports:
-              - port: 80
+              - protocol: TCP
+                port: 80
                 targetPort: 80
-            type: LoadBalancer
+            type: ClusterIP  # On change en ClusterIP car on passe par l'Ingress maintenant
+
+    # --- NOUVEAU BLOC : L'AIGUILLAGE ---
+    - name: Create Ingress Rule
+      kubernetes.core.k8s:
+        namespace: my-app
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: web-ingress
+            annotations:
+              ingress.kubernetes.io/ssl-redirect: "false"
+          spec:
+            rules:
+            - http:
+                paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: web-service
+                      port:
+                        number: 80
