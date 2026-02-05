@@ -1,0 +1,51 @@
+---
+- name: Deploy App on K3d
+  hosts: local
+  gather_facts: false
+  tasks:
+    - name: Create Namespace
+      kubernetes.core.k8s:
+        name: my-app
+        kind: Namespace
+        state: present
+
+    - name: Deploy Nginx
+      kubernetes.core.k8s:
+        namespace: my-app
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: web-server
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: web
+            template:
+              metadata:
+                labels:
+                  app: web
+              spec:
+                containers:
+                - name: nginx
+                  image: custom-nginx:latest
+                  imagePullPolicy: Never 
+                  ports:
+                  - containerPort: 80
+
+    - name: Expose Service
+      kubernetes.core.k8s:
+        namespace: my-app
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: web-service
+          spec:
+            selector:
+              app: web
+            ports:
+              - port: 80
+                targetPort: 80
+            type: LoadBalancer
